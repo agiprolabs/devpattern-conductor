@@ -1,0 +1,51 @@
+{
+  "name": "devpattern",
+  "version": "0.1.0",
+  "description": "Context-Driven Development MCP Server - Forked from Google's Conductor for use with Cline, Cursor, and other agentic coding platforms",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "devpattern": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "inspect": "npx @anthropic-ai/mcp-inspector dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "llm",
+    "cline",
+    "cursor",
+    "context-driven-development",
+    "conductor",
+    "gemini"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devpattern/devpattern.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "prompts"
+  ]
+}
