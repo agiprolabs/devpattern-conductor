@@ -10,25 +10,25 @@
 
 ### Tasks
 
-- [ ] **1.1** Set up monorepo structure with npm workspaces
+- [x] **1.1** Set up monorepo structure with npm workspaces
   - Create `web/` directory for React dashboard
   - Create `server/` directory for API server
   - Configure root package.json with workspaces
   - Add shared TypeScript configuration
 
-- [ ] **1.2** Initialize React dashboard with Vite
+- [x] **1.2** Initialize React dashboard with Vite
   - Create Vite + React + TypeScript project in `web/`
   - Configure Tailwind CSS
   - Install shadcn/ui components
   - Set up folder structure (components, pages, api)
 
-- [ ] **1.3** Initialize Express API server
+- [x] **1.3** Initialize Express API server
   - Create Express + TypeScript project in `server/`
   - Configure CORS for local development
   - Set up route structure
   - Add health check endpoint
 
-- [ ] **1.4** Configure development workflow
+- [x] **1.4** Configure development workflow
   - Add concurrent script to run server + web
   - Configure proxy in Vite for API calls
   - Add build scripts for production
