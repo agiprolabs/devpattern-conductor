@@ -1,11 +1,11 @@
 {
-  "name": "devpattern",
+  "name": "devpattern-conductor",
   "version": "0.1.0",
   "description": "Context-Driven Development MCP Server - Forked from Google's Conductor for use with Cline, Cursor, and other agentic coding platforms",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "devpattern": "dist/index.js"
+    "devpattern-conductor": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -30,7 +30,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/devpattern/devpattern.git"
+    "url": "https://github.com/agiprolabs/devpattern-conductor.git"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"

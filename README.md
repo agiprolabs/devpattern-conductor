@@ -45,7 +45,7 @@ Add to your Cline MCP settings (`~/.config/Code/User/globalStorage/saoudrizwan.c
 Or install globally:
 
 ```bash
-npm install -g devpattern
+npm install -g devpattern-conductor
 ```
 
 Then add to your MCP settings:
@@ -54,7 +54,21 @@ Then add to your MCP settings:
 {
   "mcpServers": {
     "devpattern": {
-      "command": "devpattern",
+      "command": "devpattern-conductor",
+      "disabled": false
+    }
+  }
+}
+```
+
+### Using npx (no installation)
+
+```json
+{
+  "mcpServers": {
+    "devpattern": {
+      "command": "npx",
+      "args": ["-y", "devpattern-conductor"],
       "disabled": false
     }
   }
@@ -64,8 +78,8 @@ Then add to your MCP settings:
 ### Build from Source
 
 ```bash
-git clone https://github.com/devpattern/devpattern.git
-cd devpattern
+git clone https://github.com/agiprolabs/devpattern-conductor.git
+cd devpattern-conductor
 npm install
 npm run build
 ```
