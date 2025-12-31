@@ -217,7 +217,8 @@ function ProjectsPage() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message);
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
         setLoading(false);
       });
   }, []);
@@ -369,7 +370,8 @@ function ProjectDetailPage() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message);
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message);
         setLoading(false);
       });
 
@@ -380,7 +382,8 @@ function ProjectDetailPage() {
         setDocuments(data.documents || []);
       })
       .catch(err => {
-        console.error('Failed to load documents:', err);
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('Failed to load documents:', message);
       });
   }, [id]);
 
@@ -392,7 +395,8 @@ function ProjectDetailPage() {
         setDocContent(data.content || '');
       })
       .catch(err => {
-        setDocContent(`Error loading document: ${err.message}`);
+        const message = err instanceof Error ? err.message : String(err);
+        setDocContent(`Error loading document: ${message}`);
       });
   };
 

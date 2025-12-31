@@ -4,13 +4,13 @@
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { statusPrompt } from "../prompts/status.js";
+import { getTrackDirectories } from "../utils/files.js";
+import { validateOptionalString } from "../utils/validation.js";
 import {
-  isConductorSetup,
-  getTrackDirectories,
-  readFileContent,
-  getContextPaths,
-} from "../utils/files.js";
-import { join } from "path";
+  createTextResponse,
+  validateSetup,
+  getTracksSummary,
+} from "../utils/toolHelpers.js";
 
 export const statusTool: Tool = {
   name: "devpattern_status",
@@ -32,56 +32,34 @@ export const statusTool: Tool = {
 
 export async function handleStatus(
   args: Record<string, unknown> | undefined
-): Promise<{
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}> {
-  const projectPath = (args?.projectPath as string) || process.cwd();
-
+) {
   try {
+    // Validate arguments
+    const projectPath =
+      validateOptionalString(args?.projectPath, "projectPath") || process.cwd();
+
     // Check if conductor is set up
-    const isSetup = await isConductorSetup(projectPath);
-    if (!isSetup) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ **DevPattern Not Set Up**
-
-The DevPattern/Conductor environment is not set up for this project.
-Please run \`devpattern_setup\` first to initialize the project.
-
-**Project Path:** \`${projectPath}\``,
-          },
-        ],
-        isError: true,
-      };
+    const setupError = await validateSetup(projectPath);
+    if (setupError) {
+      return setupError;
     }
 
     // Gather quick status info
-    const paths = getContextPaths(projectPath);
-    const tracksContent = await readFileContent(paths.tracks);
+    const summary = await getTracksSummary(projectPath);
     const existingTracks = await getTrackDirectories(projectPath);
 
     // Build quick summary
-    let quickSummary = "";
-    if (tracksContent) {
-      const completedTracks = (tracksContent.match(/## \[x\]/g) || []).length;
-      const inProgressTracks = (tracksContent.match(/## \[~\]/g) || []).length;
-      const pendingTracks = (tracksContent.match(/## \[ \]/g) || []).length;
-
-      quickSummary = `
+    const quickSummary = `
 ## Quick Summary
 
 | Status | Count |
 |--------|-------|
-| ✅ Completed Tracks | ${completedTracks} |
-| 🔄 In Progress Tracks | ${inProgressTracks} |
-| ⏳ Pending Tracks | ${pendingTracks} |
+| ✅ Completed Tracks | ${summary.completed} |
+| 🔄 In Progress Tracks | ${summary.inProgress} |
+| ⏳ Pending Tracks | ${summary.pending} |
 | **Total Tracks** | **${existingTracks.length}** |
 
 `;
-    }
 
     // Get the status prompt for full analysis
     const prompt = statusPrompt(projectPath);
@@ -107,14 +85,6 @@ ${prompt}`,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error getting status: ${errorMessage}`,
-        },
-      ],
-      isError: true,
-    };
+    return createTextResponse(`Error getting status: ${errorMessage}`, true);
   }
 }

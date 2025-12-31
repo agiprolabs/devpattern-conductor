@@ -258,9 +258,9 @@ app.get('/api/projects/:id', (req, res) => {
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
-    res.json(project);
+    return res.json(project);
   } catch (e) {
-    res.status(500).json({ error: 'Failed to get project', details: String(e) });
+    return res.status(500).json({ error: 'Failed to get project', details: String(e) });
   }
 });
 
@@ -274,13 +274,13 @@ app.post('/api/config/search-paths', (req, res) => {
   if (!newPath || typeof newPath !== 'string') {
     return res.status(400).json({ error: 'Path is required' });
   }
-  
+
   const config = loadConfig();
   if (!config.searchPaths.includes(newPath)) {
     config.searchPaths.push(newPath);
     saveConfig(config);
   }
-  res.json(config);
+  return res.json(config);
 });
 
 app.post('/api/config/projects', (req, res) => {
@@ -288,13 +288,13 @@ app.post('/api/config/projects', (req, res) => {
   if (!projectPath || typeof projectPath !== 'string') {
     return res.status(400).json({ error: 'Project path is required' });
   }
-  
+
   const config = loadConfig();
   if (!config.projects.includes(projectPath)) {
     config.projects.push(projectPath);
     saveConfig(config);
   }
-  res.json(config);
+  return res.json(config);
 });
 
 // Document endpoints (for reading markdown files)
@@ -323,16 +323,16 @@ app.get('/api/projects/:id/documents', (req, res) => {
           documents.push({
             name: entry.name.replace('.md', ''),
             path: relativePath,
-            type: basePath ? basePath.split('/')[0] : 'root'
+            type: basePath ? (basePath.split('/')[0] || 'root') : 'root'
           });
         }
       }
     };
 
     scanDir(conductorPath);
-    res.json({ documents, projectPath: project.path });
+    return res.json({ documents, projectPath: project.path });
   } catch (e) {
-    res.status(500).json({ error: 'Failed to list documents', details: String(e) });
+    return res.status(500).json({ error: 'Failed to list documents', details: String(e) });
   }
 });
 
@@ -345,17 +345,34 @@ app.get('/api/projects/:id/documents/*', (req, res) => {
     }
 
     // Get the document path from the wildcard
-    const docPath = req.params[0];
-    const fullPath = path.join(project.path, 'conductor', docPath);
+    // Express stores wildcard parameters at numeric indices
+    const docPath = (req.params as unknown as string[])[0];
+    if (!docPath) {
+      return res.status(400).json({ error: 'Document path is required' });
+    }
+
+    // Security: Prevent path traversal attacks
+    const normalizedPath = path.normalize(docPath);
+    if (normalizedPath.startsWith('..') || path.isAbsolute(normalizedPath)) {
+      return res.status(400).json({ error: 'Invalid path: path traversal not allowed' });
+    }
+
+    const fullPath = path.join(project.path, 'conductor', normalizedPath);
+
+    // Double-check the resolved path is still within the conductor directory
+    const conductorPath = path.join(project.path, 'conductor');
+    if (!fullPath.startsWith(conductorPath)) {
+      return res.status(400).json({ error: 'Invalid path: must be within conductor directory' });
+    }
 
     if (!fs.existsSync(fullPath)) {
       return res.status(404).json({ error: 'Document not found' });
     }
 
     const content = fs.readFileSync(fullPath, 'utf-8');
-    res.json({ content, path: docPath });
+    return res.json({ content, path: docPath });
   } catch (e) {
-    res.status(500).json({ error: 'Failed to read document', details: String(e) });
+    return res.status(500).json({ error: 'Failed to read document', details: String(e) });
   }
 });
 

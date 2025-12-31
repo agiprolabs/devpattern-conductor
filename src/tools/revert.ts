@@ -4,13 +4,14 @@
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { revertPrompt } from "../prompts/revert.js";
-import {
-  isConductorSetup,
-  getTrackDirectories,
-  readFileContent,
-  getContextPaths,
-} from "../utils/files.js";
+import { getTrackDirectories } from "../utils/files.js";
 import { isGitRepo } from "../utils/git.js";
+import { validateOptionalString } from "../utils/validation.js";
+import {
+  createTextResponse,
+  validateSetup,
+  getTracksSummary,
+} from "../utils/toolHelpers.js";
 
 export const revertTool: Tool = {
   name: "devpattern_revert",
@@ -37,41 +38,24 @@ export const revertTool: Tool = {
 
 export async function handleRevert(
   args: Record<string, unknown> | undefined
-): Promise<{
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}> {
-  const projectPath = (args?.projectPath as string) || process.cwd();
-  const target = args?.target as string | undefined;
-
+) {
   try {
+    // Validate arguments
+    const projectPath =
+      validateOptionalString(args?.projectPath, "projectPath") || process.cwd();
+    const target = validateOptionalString(args?.target, "target");
+
     // Check if conductor is set up
-    const isSetup = await isConductorSetup(projectPath);
-    if (!isSetup) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ **DevPattern Not Set Up**
-
-The DevPattern/Conductor environment is not set up for this project.
-Please run \`devpattern_setup\` first to initialize the project.
-
-**Project Path:** \`${projectPath}\``,
-          },
-        ],
-        isError: true,
-      };
+    const setupError = await validateSetup(projectPath);
+    if (setupError) {
+      return setupError;
     }
 
     // Check if this is a git repository
     const hasGit = await isGitRepo(projectPath);
     if (!hasGit) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ **Not a Git Repository**
+      return createTextResponse(
+        `❌ **Not a Git Repository**
 
 The revert operation requires a git repository. Please initialize git first:
 \`\`\`bash
@@ -79,22 +63,20 @@ git init
 \`\`\`
 
 **Project Path:** \`${projectPath}\``,
-          },
-        ],
-        isError: true,
-      };
+        true
+      );
     }
 
     // Get existing tracks for context
     const existingTracks = await getTrackDirectories(projectPath);
-    const paths = getContextPaths(projectPath);
-    const tracksContent = await readFileContent(paths.tracks);
+    const summary = await getTracksSummary(projectPath);
 
     let trackInfo = "";
     if (existingTracks.length > 0) {
       // Find in-progress and recently completed items
-      const inProgressMatches = tracksContent?.match(/## \[~\] Track: .+/g) || [];
-      const completedMatches = tracksContent?.match(/## \[x\] Track: .+/g) || [];
+      const inProgressMatches =
+        summary.content?.match(/## \[~\] Track: .+/g) || [];
+      const completedMatches = summary.content?.match(/## \[x\] Track: .+/g) || [];
 
       trackInfo = `
 ## Revert Candidates
@@ -134,14 +116,6 @@ ${prompt}`,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error initiating revert: ${errorMessage}`,
-        },
-      ],
-      isError: true,
-    };
+    return createTextResponse(`Error initiating revert: ${errorMessage}`, true);
   }
 }

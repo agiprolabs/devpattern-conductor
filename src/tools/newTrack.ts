@@ -4,7 +4,12 @@
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { newTrackPrompt } from "../prompts/newTrack.js";
-import { isConductorSetup, getTrackDirectories } from "../utils/files.js";
+import { getTrackDirectories } from "../utils/files.js";
+import { validateOptionalString } from "../utils/validation.js";
+import {
+  createTextResponse,
+  validateSetup,
+} from "../utils/toolHelpers.js";
 
 export const newTrackTool: Tool = {
   name: "devpattern_newTrack",
@@ -31,31 +36,17 @@ export const newTrackTool: Tool = {
 
 export async function handleNewTrack(
   args: Record<string, unknown> | undefined
-): Promise<{
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}> {
-  const projectPath = (args?.projectPath as string) || process.cwd();
-  const description = args?.description as string | undefined;
-
+) {
   try {
+    // Validate arguments
+    const projectPath =
+      validateOptionalString(args?.projectPath, "projectPath") || process.cwd();
+    const description = validateOptionalString(args?.description, "description");
+
     // Check if conductor is set up
-    const isSetup = await isConductorSetup(projectPath);
-    if (!isSetup) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ **DevPattern Not Set Up**
-
-The DevPattern/Conductor environment is not set up for this project.
-Please run \`devpattern_setup\` first to initialize the project.
-
-**Project Path:** \`${projectPath}\``,
-          },
-        ],
-        isError: true,
-      };
+    const setupError = await validateSetup(projectPath);
+    if (setupError) {
+      return setupError;
     }
 
     // Get existing tracks for context
@@ -93,14 +84,6 @@ ${prompt}`,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error creating new track: ${errorMessage}`,
-        },
-      ],
-      isError: true,
-    };
+    return createTextResponse(`Error creating new track: ${errorMessage}`, true);
   }
 }

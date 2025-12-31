@@ -4,13 +4,13 @@
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { implementPrompt } from "../prompts/implement.js";
+import { getTrackDirectories } from "../utils/files.js";
+import { validateOptionalString } from "../utils/validation.js";
 import {
-  isConductorSetup,
-  getTrackDirectories,
-  readFileContent,
-  getContextPaths,
-} from "../utils/files.js";
-import { join } from "path";
+  createTextResponse,
+  validateSetup,
+  getTracksSummary,
+} from "../utils/toolHelpers.js";
 
 export const implementTool: Tool = {
   name: "devpattern_implement",
@@ -37,74 +37,45 @@ export const implementTool: Tool = {
 
 export async function handleImplement(
   args: Record<string, unknown> | undefined
-): Promise<{
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}> {
-  const projectPath = (args?.projectPath as string) || process.cwd();
-  const trackId = args?.trackId as string | undefined;
-
+) {
   try {
+    // Validate arguments
+    const projectPath =
+      validateOptionalString(args?.projectPath, "projectPath") || process.cwd();
+    const trackId = validateOptionalString(args?.trackId, "trackId");
+
     // Check if conductor is set up
-    const isSetup = await isConductorSetup(projectPath);
-    if (!isSetup) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `❌ **DevPattern Not Set Up**
-
-The DevPattern/Conductor environment is not set up for this project.
-Please run \`devpattern_setup\` first to initialize the project.
-
-**Project Path:** \`${projectPath}\``,
-          },
-        ],
-        isError: true,
-      };
+    const setupError = await validateSetup(projectPath);
+    if (setupError) {
+      return setupError;
     }
 
     // Get existing tracks and their status
     const existingTracks = await getTrackDirectories(projectPath);
     if (existingTracks.length === 0) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `📋 **No Tracks Found**
+      return createTextResponse(
+        `📋 **No Tracks Found**
 
 There are no tracks to implement. Create a new track first using \`devpattern_newTrack\`.
 
 **Project Path:** \`${projectPath}\``,
-          },
-        ],
-        isError: true,
-      };
+        true
+      );
     }
 
-    // Read tracks.md for status overview
-    const paths = getContextPaths(projectPath);
-    const tracksContent = await readFileContent(paths.tracks);
+    // Get track status summary
+    const summary = await getTracksSummary(projectPath);
 
     let trackInfo = `
 **Available Tracks:** ${existingTracks.length}
 ${existingTracks.map((t) => `- \`${t}\``).join("\n")}
 
-`;
-
-    if (tracksContent) {
-      // Extract status summary from tracks.md
-      const completedCount = (tracksContent.match(/\[x\]/g) || []).length;
-      const inProgressCount = (tracksContent.match(/\[~\]/g) || []).length;
-      const pendingCount = (tracksContent.match(/\[ \]/g) || []).length;
-
-      trackInfo += `**Status Summary:**
-- ✅ Completed: ${completedCount}
-- 🔄 In Progress: ${inProgressCount}
-- ⏳ Pending: ${pendingCount}
+**Status Summary:**
+- ✅ Completed: ${summary.completed}
+- 🔄 In Progress: ${summary.inProgress}
+- ⏳ Pending: ${summary.pending}
 
 `;
-    }
 
     // Get the implement prompt
     const prompt = implementPrompt(projectPath, trackId);
@@ -130,14 +101,9 @@ ${prompt}`,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error starting implementation: ${errorMessage}`,
-        },
-      ],
-      isError: true,
-    };
+    return createTextResponse(
+      `Error starting implementation: ${errorMessage}`,
+      true
+    );
   }
 }

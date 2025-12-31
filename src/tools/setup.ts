@@ -4,11 +4,9 @@
 
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { setupPrompt } from "../prompts/setup.js";
-import {
-  isConductorSetup,
-  readSetupState,
-  getContextPaths,
-} from "../utils/files.js";
+import { isConductorSetup, readSetupState } from "../utils/files.js";
+import { validateOptionalString } from "../utils/validation.js";
+import { createTextResponse } from "../utils/toolHelpers.js";
 
 export const setupTool: Tool = {
   name: "devpattern_setup",
@@ -31,13 +29,12 @@ export const setupTool: Tool = {
 
 export async function handleSetup(
   args: Record<string, unknown> | undefined
-): Promise<{
-  content: Array<{ type: string; text: string }>;
-  isError?: boolean;
-}> {
-  const projectPath = (args?.projectPath as string) || process.cwd();
-
+) {
   try {
+    // Validate arguments
+    const projectPath =
+      validateOptionalString(args?.projectPath, "projectPath") || process.cwd();
+
     // Check current setup state
     const isSetup = await isConductorSetup(projectPath);
     const state = await readSetupState(projectPath);
@@ -93,14 +90,6 @@ ${prompt}`,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error initializing setup: ${errorMessage}`,
-        },
-      ],
-      isError: true,
-    };
+    return createTextResponse(`Error initializing setup: ${errorMessage}`, true);
   }
 }
